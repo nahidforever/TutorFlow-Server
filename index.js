@@ -124,6 +124,27 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/my-bookings/:email", async (req, res) => {
+      const email = req.params.email;
+
+      const result = await bookingCollection
+        .find({ studentEmail: email })
+        .toArray();
+
+      res.send(result);
+    });
+
+    app.patch("/cancel-booking/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await bookingCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "cancelled" } },
+      );
+
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
