@@ -24,6 +24,7 @@ async function run() {
 
     const db = client.db("tutorflow-db");
     const tutorCollection = db.collection("tutor");
+    const bookingCollection = db.collection("bookings");
 
     app.get("/available-tutor", async (req, res) => {
       const result = await tutorCollection.find().limit(6).toArray();
@@ -83,6 +84,42 @@ async function run() {
       const result = await tutorCollection.deleteOne({
         _id: new ObjectId(id),
       });
+
+      res.send(result);
+    });
+
+    app.post("/book-session", async (req, res) => {
+      const booking = req.body;
+
+      const tutor = await tutorCollection.findOne({
+        _id: new ObjectId(booking.tutorId),
+      });
+
+      if (!tutor) {
+        return res.send({ message: "Tutor not found" });
+      }
+
+      if (tutor.totalSlot <= 0) {
+        return res.send({
+          message: "No available slots left, This session is fully booked.",
+        });
+      }
+
+      const today = new Date();
+      const sessionDate = new Date(tutor.sessionStartDate);
+
+      if (today < sessionDate) {
+        return res.send({
+          message: "Booking is not available yet for this tutor",
+        });
+      }
+
+      const result = await bookingCollection.insertOne(booking);
+
+      await tutorCollection.updateOne(
+        { _id: new ObjectId(booking.tutorId) },
+        { $inc: { totalSlot: -1 } },
+      );
 
       res.send(result);
     });
