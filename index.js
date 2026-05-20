@@ -57,7 +57,26 @@ async function run() {
     });
 
     app.get("/tutor", async (req, res) => {
-      const result = await tutorCollection.find().toArray();
+      const { searchParams, startDate, endDate } = req.query;
+
+      let query = {};
+
+      if (searchParams) {
+        query.tutorName = {
+          $regex: searchParams,
+          $options: "i",
+        };
+      }
+
+      if (startDate && endDate) {
+        query.sessionStartDate = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+
+      const result = await tutorCollection.find(query).toArray();
+
       res.send(result);
     });
 
@@ -86,7 +105,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/update-tutor/:id", async (req, res) => {
+    app.patch("/update-tutor/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       const updatedData = req.body;
@@ -103,7 +122,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/delete-tutor/:id", async (req, res) => {
+    app.delete("/delete-tutor/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       const result = await tutorCollection.deleteOne({
@@ -113,7 +132,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/book-session", async (req, res) => {
+    app.post("/book-session", verifyToken, async (req, res) => {
       const booking = req.body;
 
       const tutor = await tutorCollection.findOne({
@@ -159,7 +178,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/cancel-booking/:id", async (req, res) => {
+    app.patch("/cancel-booking/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       const result = await bookingCollection.updateOne(
