@@ -5,6 +5,7 @@ const cors = require("cors");
 const port = process.env.PORT || 5000;
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 const uri = process.env.MONGO_DB_URL;
 
 app.use(cors());
@@ -17,6 +18,30 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req?.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+};
 
 async function run() {
   try {
@@ -36,7 +61,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/tutor/:id", async (req, res) => {
+    app.get("/tutor/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
 
       const result = await tutorCollection.findOne({
@@ -45,7 +70,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/add-tutor", async (req, res) => {
+    app.post("/add-tutor", verifyToken, async (req, res) => {
       const tutorData = req.body;
 
       const result = await tutorCollection.insertOne(tutorData);
@@ -53,7 +78,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/my-tutors/:email", async (req, res) => {
+    app.get("/my-tutors/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
       const result = await tutorCollection.find({ userEmail: email }).toArray();
@@ -124,7 +149,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/my-bookings/:email", async (req, res) => {
+    app.get("/my-bookings/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
       const result = await bookingCollection
