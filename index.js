@@ -114,7 +114,11 @@ async function run() {
     app.patch("/update-tutor/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
-      const updatedData = req.body;
+      const updatedData = {
+        ...req.body,
+        hourlyFee: Number(req.body.hourlyFee),
+        totalSlot: Number(req.body.totalSlot),
+      };
 
       const result = await tutorCollection.updateOne(
         {
