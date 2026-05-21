@@ -47,7 +47,6 @@ const verifyToken = async (req, res, next) => {
 
 async function run() {
   try {
-
     // await client.connect();
 
     const db = client.db("tutorflow-db");
@@ -93,7 +92,11 @@ async function run() {
     });
 
     app.post("/add-tutor", verifyToken, async (req, res) => {
-      const tutorData = req.body;
+      const tutorData = {
+        ...req.body,
+        hourlyFee: Number(req.body.hourlyFee),
+        totalSlot: Number(req.body.totalSlot),
+      };
 
       const result = await tutorCollection.insertOne(tutorData);
 
@@ -137,6 +140,12 @@ async function run() {
 
     app.post("/book-session", verifyToken, async (req, res) => {
       const booking = req.body;
+
+      if (!ObjectId.isValid(booking.tutorId)) {
+        return res.send({
+          message: "Invalid Tutor ID",
+        });
+      }
 
       const tutor = await tutorCollection.findOne({
         _id: new ObjectId(booking.tutorId),
